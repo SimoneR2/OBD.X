@@ -8,38 +8,61 @@
 #include "timers.h"
 #include "math.h"
 #define _XTAL_FREQ 16000000
-void board_initialization (void);
-#define absled port
-#define epsled port
-#define motore port
+void board_initialization(void);
+#define absled PORTDbits.RD6
+#define epsled PORTDbits.RD5
+#define telecomando PORTDbits.RD4
+#define parcheggio PORTAbits.RA1
+
 __interrupt(low_priority) void ISR_Bassa(void) {
     //INTERRUPT CANBUS
     if ((PIR3bits.RXB0IF == HIGH) || (PIR3bits.RXB1IF == HIGH)) {
         if (CANisRxReady()) {
             CANreceiveMessage(&msg);
             if (msg.identifier == ECU_STATE_ABS) {
-                if (msg.RTR == 1){
-                    led1 = 1;
+                if (msg.RTR == 1) {
+                    absled = 0;
+                } else {
+                    absled = 1;
                 }
             }
-            if (msg.identifier == DISTANCE_SET) {
-                distance_set_value = msg.data[0];
-                distance_set_counter_1 = 0;
-                distance_set_counter_2 = 0;
-                distance_set_flag = HIGH;
+            if (msg.identifier == ECU_STATE_EPS) {
+                if (msg.RTR == 1) {
+                    epsled = 0;
+                } else {
+                    epsled = 1;
+                }
+            }
+            if (msg.identifier == ECU_STATE_REMOTECAN) {
+                if (msg.RTR == 1) {
+                    telecomando = 0;
+                } else {
+                    telecomando = 1;
+                }
+            }
+            if (msg.identifier == PARK_ASSIST_STATE) {
+                if (msg.data[0] == 4) {
+                    parcheggio = 1;
+                }
+            }
+            if (msg.identifier == SENSOR_DISTANCE) {
+                if (msg.data[0] > 64) {
+                    PORTDbits.RD0 = 1;
+                } else {
+                    PORTDbits.RD0 = 0;
+                }
             }
         }
         PIR3bits.RXB0IF = LOW;
         PIR3bits.RXB1IF = LOW;
     }
+}
 
-void main(void){
+void main(void) {
     board_initialization();
-    while (1){
-        }
+    while (1) {
     }
-    
-
+}
 
 void board_initialization(void) {
     //Inputs and Outputs Configuration
